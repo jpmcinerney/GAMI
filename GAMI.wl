@@ -62,6 +62,12 @@ Unit::usage="An object defined by the unit cell of a sheet."
 Tessellation::usage="The tessellation of a sheet with a chosen number of cells."
 
 
+RigidityMatrix::usage="The rigidity matrix for a network."
+
+
+EquilibriumMatrix::usage="The equilibrium matrix for a network."
+
+
 (* ::Section:: *)
 (*Errors*)
 
@@ -110,6 +116,8 @@ Network[vertices_,periodicity_,topology_]["Edges"]:=topology["Edges"]
 Network[vertices_,periodicity_,topology_]["Edge"[index_]]:=topology["Edge"[index]]
 Network[vertices_,periodicity_,topology_]["Faces"]:=topology["Faces"]
 Network[vertices_,periodicity_,topology_]["Face"[index_]]:=topology["Face"[index]]
+Network[vertices_,periodicity_,topology_]["NumEdges"]:=Length[topology["Edges"]]
+Network[vertices_,periodicity_,topology_]["NumFaces"]:=Length[topology["Faces"]]
 
 
 (* ::Subsection::Closed:: *)
@@ -117,8 +125,10 @@ Network[vertices_,periodicity_,topology_]["Face"[index_]]:=topology["Face"[index
 
 
 SpatialQ[_Spatial]:=True
+SpatialQ[network_Network]:=SpatialQ@network["Periodicity"]
 SpatialQ[_]:=False
 ScrewQ[_Screw]:=True
+ScrewQ[network_Network]:=ScrewQ@network["Periodicity"]
 ScrewQ[_]:=False
 
 
@@ -146,8 +156,10 @@ Screw[translations_,angles_,axis_]["Axis"]:=axis
 
 
 TriangulationQ[_Triangulation]:=True
+TriangulationQ[network_Network]:=TriangulationQ@Network["Topology"]
 TriangulationQ[_]:=False
 QuadrilateralQ[_Quadrilateral]:=True
+QuadrilateralQ[network_Network]:=QuadrilateralQ@Network["Topology"]
 QuadrilateralQ[_]:=False
 
 
@@ -216,6 +228,37 @@ Unit[network_,cell_:{0,0}]["Complex"]:=Table[Face[network,index,cell]["Complex"]
 
 
 Tessellation[network_,cells_]["Complex"]:=Flatten[Table[Unit[network,{n1,n2}]["Complex"],{n1,0,First[cells]-1},{n2,0,Last[cells]-1}]]
+
+
+(* ::Subsection::Closed:: *)
+(*Rigidity Matrix*)
+
+
+RigidityMatrix[network_]:=Normal@SparseArray@Flatten@Table[
+{
+{index,3 network["Edge"[index]][[1,1]]-2}->#[[1]],
+{index,3 network["Edge"[index]][[1,1]]-1}->#[[2]],
+{index,3 network["Edge"[index]][[1,1]]}->#[[3]],
+{index,3 network["Edge"[index]][[2,1]]-2}->-#[[1]],
+{index,3 network["Edge"[index]][[2,1]]-1}->-#[[2]],
+{index,3 network["Edge"[index]][[2,1]]}->-#[[3]]
+}&@Edge[network,index]["Direction"],{index,network["NumEdges"]}]/;SpatialQ@network
+
+
+(* ::Subsection::Closed:: *)
+(*Equilibrium Matrix*)
+
+
+EquilibriumMatrix[network_]:=Normal@SparseArray@Flatten@Table[
+{
+{3 network["Edge"[index]][[1,1]]-2,index}->#[[1]],
+{3 network["Edge"[index]][[1,1]]-1,index}->#[[2]],
+{3 network["Edge"[index]][[1,1]],index}->#[[3]],
+{3 network["Edge"[index]][[2,1]]-2,index}->-#[[1]],
+{3 network["Edge"[index]][[2,1]]-1,index}->-#[[2]],
+{3 network["Edge"[index]][[2,1]],index}->-#[[3]]
+}&@Edge[network,index]["Direction"],{index,network["NumEdges"]}]/;SpatialQ@network
+
 
 
 (* ::Title:: *)
